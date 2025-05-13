@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { FilterBar, FilterState } from '@/components/dashboard/FilterBar';
@@ -22,6 +23,7 @@ const Dashboard = () => {
   const [leads, setLeads] = useState<LeadCard[]>([]);
   const [clients, setClients] = useState<User[]>([]);
   const [totalLeads, setTotalLeads] = useState(0);
+  const [page, setPage] = useState(1);
   
   // Filter lists
   const [fontes, setFontes] = useState<string[]>([]);
@@ -47,6 +49,11 @@ const Dashboard = () => {
     averageLeadsPerDay: 0,
     percentChange: 0
   });
+
+  // Handle page change for the leads table
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
 
   // Set default date range to last 30 days
   const now = new Date();
@@ -570,8 +577,6 @@ const Dashboard = () => {
 
     fetchData();
   }, [filters, page, toast]);
-
-  const [page, setPage] = useState(1);
 
   const handleExport = () => {
     // In a real implementation, this would export the data
