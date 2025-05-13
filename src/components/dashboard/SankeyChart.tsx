@@ -35,7 +35,7 @@ type SankeyChartProps = {
   data: SankeyData;
 };
 
-// Define color palette for different node types
+// Define color palette for different node types - these should match the legend colors
 const getNodeColor = (nodeName: string): string => {
   if (nodeName.startsWith('Fonte:')) {
     return '#8884d8'; // Purple for source
@@ -179,7 +179,7 @@ export function SankeyChart({ data }: SankeyChartProps) {
                 opacity: 0.8, // Slight transparency for better visualization
               }}
               node={{
-                fill: '#8884d8',
+                fill: (nodeProps) => nodeProps.color || '#8884d8',
                 stroke: '#fff',
                 strokeWidth: 1,
               }}
