@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { FilterBar, FilterState } from '@/components/dashboard/FilterBar';
@@ -653,17 +652,22 @@ const Dashboard = () => {
 
         <SankeyChart data={sankeyData} />
 
-        <TopRankings
-          topCampaigns={topCampaigns}
-          topConjuntos={topConjuntos}
-          topAnuncios={topAnuncios}
-        />
-
-        <LeadsTable 
-          leads={leads} 
-          totalLeads={totalLeads} 
-          onPageChange={handlePageChange}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="col-span-1">
+            <TopRankings
+              topCampaigns={topCampaigns}
+              topConjuntos={topConjuntos}
+              topAnuncios={topAnuncios}
+            />
+          </div>
+          <div className="col-span-1 lg:col-span-2">
+            <LeadsTable 
+              leads={leads} 
+              totalLeads={totalLeads} 
+              onPageChange={handlePageChange}
+            />
+          </div>
+        </div>
 
         <WeeklyHeatmap data={weekdayData} />
       </div>
