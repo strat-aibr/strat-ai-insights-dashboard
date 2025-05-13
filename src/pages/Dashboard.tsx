@@ -190,10 +190,15 @@ const Dashboard = () => {
           query = query.or(`nome.ilike.%${filters.search}%,numero_de_telefone.ilike.%${filters.search}%`);
         }
         
-        // Execute the query with ordering by data_criacao
+        // Calculate pagination
+        const pageSize = 10;
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize - 1;
+        
+        // Execute the query with ordering by data_criacao and pagination
         const { data, count, error } = await query
           .order('data_criacao', { ascending: false })
-          .range(0, 9); // First 10 rows for the table
+          .range(startIndex, endIndex);
         
         if (error) throw error;
         
@@ -564,7 +569,9 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, [filters, toast]);
+  }, [filters, page, toast]);
+
+  const [page, setPage] = useState(1);
 
   const handleExport = () => {
     // In a real implementation, this would export the data
@@ -647,7 +654,11 @@ const Dashboard = () => {
           topAnuncios={topAnuncios}
         />
 
-        <LeadsTable leads={leads} totalLeads={totalLeads} />
+        <LeadsTable 
+          leads={leads} 
+          totalLeads={totalLeads} 
+          onPageChange={handlePageChange}
+        />
 
         <WeeklyHeatmap data={weekdayData} />
       </div>

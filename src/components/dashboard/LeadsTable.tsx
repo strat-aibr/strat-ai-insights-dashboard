@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -12,20 +12,21 @@ import {
   Pagination,
   PaginationContent,
   PaginationItem,
+  PaginationLink,
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { Card as LeadCard } from '@/lib/supabase';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 type LeadsTableProps = {
   leads: LeadCard[];
   totalLeads: number;
+  onPageChange?: (page: number) => void;
 };
 
-export function LeadsTable({ leads, totalLeads }: LeadsTableProps) {
+export function LeadsTable({ leads, totalLeads, onPageChange }: LeadsTableProps) {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const totalPages = Math.ceil(totalLeads / pageSize);
@@ -41,15 +42,28 @@ export function LeadsTable({ leads, totalLeads }: LeadsTableProps) {
 
   const goToNextPage = () => {
     if (page < totalPages) {
-      setPage(page + 1);
+      const newPage = page + 1;
+      setPage(newPage);
+      if (onPageChange) {
+        onPageChange(newPage);
+      }
     }
   };
 
   const goToPreviousPage = () => {
     if (page > 1) {
-      setPage(page - 1);
+      const newPage = page - 1;
+      setPage(newPage);
+      if (onPageChange) {
+        onPageChange(newPage);
+      }
     }
   };
+
+  // Reset page when totalLeads or leads change
+  useEffect(() => {
+    setPage(1);
+  }, [totalLeads]);
 
   return (
     <Card className="table-container">
@@ -104,13 +118,10 @@ export function LeadsTable({ leads, totalLeads }: LeadsTableProps) {
                   onClick={goToPreviousPage} 
                   className={page === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
                   aria-disabled={page === 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Anterior
-                </PaginationPrevious>
+                />
               </PaginationItem>
               <PaginationItem>
-                <span className="text-sm">
+                <span className="text-sm font-medium">
                   Página {page} de {totalPages > 0 ? totalPages : 1}
                 </span>
               </PaginationItem>
@@ -119,10 +130,7 @@ export function LeadsTable({ leads, totalLeads }: LeadsTableProps) {
                   onClick={goToNextPage} 
                   className={page === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
                   aria-disabled={page === totalPages || totalPages === 0}
-                >
-                  Próximo
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </PaginationNext>
+                />
               </PaginationItem>
             </PaginationContent>
           </Pagination>
