@@ -179,9 +179,18 @@ export function SankeyChart({ data }: SankeyChartProps) {
                 opacity: 0.8, // Slight transparency for better visualization
               }}
               node={{
-                fill: (nodeProps) => nodeProps.color || '#8884d8',
+                fill: '#8884d8', // Default color
                 stroke: '#fff',
                 strokeWidth: 1,
+              }}
+              // We will color the nodes using the nodeStyle property
+              nodeStyle={(nodeProps) => {
+                // Get the node index
+                const index = nodeProps.index;
+                // Get the node from our data
+                const node = safeData.nodes[index];
+                // Return style with the appropriate color
+                return { fill: node.color || '#8884d8' };
               }}
             >
               <Tooltip 
@@ -229,3 +238,4 @@ export function SankeyChart({ data }: SankeyChartProps) {
     </Card>
   );
 }
+
