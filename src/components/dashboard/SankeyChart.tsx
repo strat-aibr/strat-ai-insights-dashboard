@@ -8,6 +8,11 @@ import {
   Text
 } from 'recharts';
 import { cn } from '@/lib/utils';
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from '@/components/ui/hover-card';
 
 // Sankey diagram requires specific data structure
 type SankeyNode = {
@@ -44,6 +49,15 @@ const getNodeColor = (nodeName: string): string => {
   return '#83a6ed'; // Default blue
 };
 
+// Get the full node name
+const getFullNodeName = (name: string): { type: string; value: string } => {
+  if (name.includes(':')) {
+    const [type, value] = name.split(': ');
+    return { type, value: value || 'Desconhecido' };
+  }
+  return { type: 'Outro', value: name };
+};
+
 // Custom label rendering function
 const renderCustomNodeLabel = ({ x, y, width, height, index, payload, name }: any) => {
   // Extract the node name without the prefix (Fonte:, Campanha:, etc.)
@@ -74,6 +88,15 @@ const renderCustomNodeLabel = ({ x, y, width, height, index, payload, name }: an
       </Text>
     </Layer>
   );
+};
+
+// Enhanced tooltip formatter to show full node information
+const tooltipFormatter = (value: number | string, name: string) => {
+  const { type, value: nodeValue } = getFullNodeName(name);
+  return [
+    `${value} leads`,
+    `${type}: ${nodeValue}`
+  ];
 };
 
 export function SankeyChart({ data }: SankeyChartProps) {
@@ -129,13 +152,10 @@ export function SankeyChart({ data }: SankeyChartProps) {
     );
   }
 
-  // Format node name to be cleaner in the tooltip
+  // Enhanced tooltip label formatter to show full name
   const formatNodeName = (name: string) => {
-    if (name.includes(':')) {
-      const [type, value] = name.split(': ');
-      return `${type}: ${value || 'Desconhecido'}`;
-    }
-    return name;
+    const { type, value } = getFullNodeName(name);
+    return `${type}: ${value}`;
   };
 
   return (
@@ -165,14 +185,16 @@ export function SankeyChart({ data }: SankeyChartProps) {
               }}
             >
               <Tooltip 
-                formatter={(value) => [`${value} leads`, 'Volume']}
-                labelFormatter={(name) => formatNodeName(name)}
+                formatter={tooltipFormatter}
+                labelFormatter={formatNodeName}
                 contentStyle={{ 
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.98)',
                   border: '1px solid #e0e0e0',
                   borderRadius: '4px',
-                  padding: '10px',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+                  padding: '12px',
+                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+                  fontSize: '13px',
+                  fontWeight: '500'
                 }}
               />
               {safeData.nodes.map((entry, index) => (
