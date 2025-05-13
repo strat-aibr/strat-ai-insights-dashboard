@@ -351,7 +351,8 @@ const Dashboard = () => {
       setDeviceData(deviceArray);
       
       // Generate Sankey chart data (Fonte -> Conjunto -> Anúncio)
-      generateSankeyData(data);
+      const sankeyData = generateSankeyData(data);
+      setSankeyData(sankeyData);
       
       // Generate top campaigns, conjuntos, and anuncios
       generateTopLists(data);
@@ -362,55 +363,119 @@ const Dashboard = () => {
 
     const generateSankeyData = (data: any[]) => {
       try {
-        // Create maps for unique nodes and their relationships
-        const uniqueNodes = new Map();
-        const validLinks = new Map();
+        // Mapeamento para nomes mais legíveis
+        const getReadableName = (type: string, value: string | null): string => {
+          if (!value) return `${type}: Desconhecido`;
+          return `${type}: ${value}`;
+        };
+
+        // Coletar dados únicos organizados por tipo
+        const fontes = new Map();
+        const campanhas = new Map();
+        const conjuntos = new Map();
+        const anuncios = new Map();
         
-        // First, collect all unique sources, conjuntos, and anuncios
+        // Mapeamento para contar relações entre elementos
+        const fonteToCampanha = new Map();
+        const campanhaToConjunto = new Map();
+        const conjuntoToAnuncio = new Map();
+        
+        // Processar todos os leads e contar ocorrências
         data.forEach(item => {
-          const fonte = item.fonte || 'Unknown Source';
-          const conjunto = item.conjunto || 'Unknown Conjunto';
-          const anuncio = item.anuncio || 'Unknown Anuncio';
+          const fonte = item.fonte || 'Desconhecido';
+          const campanha = item.campanha || 'Desconhecido';
+          const conjunto = item.conjunto || 'Desconhecido';
+          const anuncio = item.anuncio || 'Desconhecido';
           
-          if (!uniqueNodes.has(fonte)) uniqueNodes.set(fonte, uniqueNodes.size);
-          if (!uniqueNodes.has(conjunto)) uniqueNodes.set(conjunto, uniqueNodes.size);
-          if (!uniqueNodes.has(anuncio)) uniqueNodes.set(anuncio, uniqueNodes.size);
+          // Incrementar contagens para cada elemento
+          fontes.set(fonte, (fontes.get(fonte) || 0) + 1);
+          campanhas.set(campanha, (campanhas.get(campanha) || 0) + 1);
+          conjuntos.set(conjunto, (conjuntos.get(conjunto) || 0) + 1);
+          anuncios.set(anuncio, (anuncios.get(anuncio) || 0) + 1);
+          
+          // Incrementar contagens para cada relação
+          const fonteToKey = `${fonte}->${campanha}`;
+          fonteToCampanha.set(fonteToKey, (fonteToCampanha.get(fonteToKey) || 0) + 1);
+          
+          const campanhaToKey = `${campanha}->${conjunto}`;
+          campanhaToConjunto.set(campanhaToKey, (campanhaToConjunto.get(campanhaToKey) || 0) + 1);
+          
+          const conjuntoToKey = `${conjunto}->${anuncio}`;
+          conjuntoToAnuncio.set(conjuntoToKey, (conjuntoToAnuncio.get(conjuntoToKey) || 0) + 1);
         });
         
-        // Create nodes array
-        const nodes = Array.from(uniqueNodes.keys()).map(name => ({ name }));
+        // Criar nós com prefixos para evitar conflitos de nome
+        const nodes: { name: string }[] = [];
         
-        // Create links with validation to prevent circular references
-        data.forEach(item => {
-          const fonte = item.fonte || 'Unknown Source';
-          const conjunto = item.conjunto || 'Unknown Conjunto';
-          const anuncio = item.anuncio || 'Unknown Anuncio';
+        // Adicionar os nós com prefixos para garantir exclusividade
+        Array.from(fontes.keys()).forEach(fonte => 
+          nodes.push({ name: getReadableName('Fonte', fonte) }));
+        
+        Array.from(campanhas.keys()).forEach(campanha => 
+          nodes.push({ name: getReadableName('Campanha', campanha) }));
+        
+        Array.from(conjuntos.keys()).forEach(conjunto => 
+          nodes.push({ name: getReadableName('Conjunto', conjunto) }));
+        
+        Array.from(anuncios.keys()).forEach(anuncio => 
+          nodes.push({ name: getReadableName('Anúncio', anuncio) }));
+        
+        // Criar links
+        const links: { source: number; target: number; value: number }[] = [];
+        
+        // Mapear índices dos nós
+        const nodeMap = new Map();
+        nodes.forEach((node, index) => {
+          nodeMap.set(node.name, index);
+        });
+        
+        // Adicionar links de fonte para campanha
+        fonteToCampanha.forEach((value, key) => {
+          const [fonte, campanha] = key.split('->');
+          const sourceIndex = nodeMap.get(getReadableName('Fonte', fonte));
+          const targetIndex = nodeMap.get(getReadableName('Campanha', campanha));
           
-          const sourceIndex1 = uniqueNodes.get(fonte);
-          const targetIndex1 = uniqueNodes.get(conjunto);
-          
-          if (sourceIndex1 !== targetIndex1 && sourceIndex1 !== undefined && targetIndex1 !== undefined) {
-            const linkKey1 = `${sourceIndex1}-${targetIndex1}`;
-            validLinks.set(linkKey1, (validLinks.get(linkKey1) || 0) + 1);
+          if (sourceIndex !== undefined && targetIndex !== undefined) {
+            links.push({
+              source: sourceIndex,
+              target: targetIndex,
+              value
+            });
           }
+        });
+        
+        // Adicionar links de campanha para conjunto
+        campanhaToConjunto.forEach((value, key) => {
+          const [campanha, conjunto] = key.split('->');
+          const sourceIndex = nodeMap.get(getReadableName('Campanha', campanha));
+          const targetIndex = nodeMap.get(getReadableName('Conjunto', conjunto));
           
-          const sourceIndex2 = uniqueNodes.get(conjunto);
-          const targetIndex2 = uniqueNodes.get(anuncio);
-          
-          if (sourceIndex2 !== targetIndex2 && sourceIndex2 !== undefined && targetIndex2 !== undefined) {
-            const linkKey2 = `${sourceIndex2}-${targetIndex2}`;
-            validLinks.set(linkKey2, (validLinks.get(linkKey2) || 0) + 1);
+          if (sourceIndex !== undefined && targetIndex !== undefined) {
+            links.push({
+              source: sourceIndex,
+              target: targetIndex,
+              value
+            });
           }
         });
         
-        // Convert links map to array
-        const links = Array.from(validLinks).map(([key, value]) => {
-          const [source, target] = key.split('-').map(Number);
-          return { source, target, value };
+        // Adicionar links de conjunto para anúncio
+        conjuntoToAnuncio.forEach((value, key) => {
+          const [conjunto, anuncio] = key.split('->');
+          const sourceIndex = nodeMap.get(getReadableName('Conjunto', conjunto));
+          const targetIndex = nodeMap.get(getReadableName('Anúncio', anuncio));
+          
+          if (sourceIndex !== undefined && targetIndex !== undefined) {
+            links.push({
+              source: sourceIndex,
+              target: targetIndex,
+              value
+            });
+          }
         });
         
-        // Ensure we have valid data
-        if (nodes.length === 0 || links.length === 0) {
+        // Se não houver dados suficientes, retornar estrutura vazia
+        if (nodes.length <= 1 || links.length === 0) {
           return {
             nodes: [{ name: 'No Data' }],
             links: []
