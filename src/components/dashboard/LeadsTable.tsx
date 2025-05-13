@@ -17,6 +17,8 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Eye, EyeOff } from 'lucide-react';
 import { format } from 'date-fns';
 import { Card as LeadCard } from '@/lib/supabase';
 
@@ -28,9 +30,15 @@ type LeadsTableProps = {
 
 export function LeadsTable({ leads, totalLeads, onPageChange }: LeadsTableProps) {
   const [page, setPage] = useState(1);
+  const [showOrganics, setShowOrganics] = useState(true);
   const pageSize = 10;
   const totalPages = Math.ceil(totalLeads / pageSize);
 
+  // Filter leads based on showOrganics state
+  const filteredLeads = showOrganics 
+    ? leads 
+    : leads.filter(lead => lead.fonte !== "Orgânico");
+  
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
@@ -67,8 +75,26 @@ export function LeadsTable({ leads, totalLeads, onPageChange }: LeadsTableProps)
 
   return (
     <Card className="table-container">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 flex flex-row justify-between items-center">
         <CardTitle className="text-lg">Lista de Leads</CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowOrganics(!showOrganics)}
+          className="flex items-center gap-2"
+        >
+          {showOrganics ? (
+            <>
+              <EyeOff className="h-4 w-4" />
+              Ocultar Orgânicos
+            </>
+          ) : (
+            <>
+              <Eye className="h-4 w-4" />
+              Mostrar Orgânicos
+            </>
+          )}
+        </Button>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -86,8 +112,8 @@ export function LeadsTable({ leads, totalLeads, onPageChange }: LeadsTableProps)
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leads.length > 0 ? (
-                leads.map((lead) => (
+              {filteredLeads.length > 0 ? (
+                filteredLeads.map((lead) => (
                   <TableRow key={lead.id}>
                     <TableCell>{formatDate(lead.data_criacao)}</TableCell>
                     <TableCell>{lead.nome}</TableCell>
