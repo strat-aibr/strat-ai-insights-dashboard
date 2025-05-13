@@ -40,7 +40,7 @@ const Dashboard = () => {
   const [topCampaigns, setTopCampaigns] = useState<{ name: string; value: number }[]>([]);
   const [topConjuntos, setTopConjuntos] = useState<{ name: string; value: number }[]>([]);
   const [topAnuncios, setTopAnuncios] = useState<{ name: string; value: number }[]>([]);
-  const [heatmapData, setHeatmapData] = useState<{ [day: string]: { [hour: string]: number } }>({});
+  const [weekdayData, setWeekdayData] = useState<{ [day: string]: number }>({});
   const [metrics, setMetrics] = useState({
     totalLeads: 0,
     trackedLeads: 0,
@@ -107,6 +107,44 @@ const Dashboard = () => {
     loadClients();
   }, [isAdmin, toast]);
 
+  // Load filter options from available data
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        // Building the query
+        let query = supabase
+          .from('TRACKING | CARDS')
+          .select('fonte, campanha, conjunto, anuncio');
+        
+        // Apply client filter if set
+        if (filters.clientId) {
+          query = query.eq('user_id', parseInt(filters.clientId));
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          // Extract unique values for each filter
+          const uniqueFontes = [...new Set(data.map(item => item.fonte).filter(Boolean))];
+          const uniqueCampanhas = [...new Set(data.map(item => item.campanha).filter(Boolean))];
+          const uniqueConjuntos = [...new Set(data.map(item => item.conjunto).filter(Boolean))];
+          const uniqueAnuncios = [...new Set(data.map(item => item.anuncio).filter(Boolean))];
+
+          setFontes(uniqueFontes);
+          setCampanhas(uniqueCampanhas);
+          setConjuntos(uniqueConjuntos);
+          setAnuncios(uniqueAnuncios);
+        }
+      } catch (error: any) {
+        console.error('Error loading filter options:', error.message);
+      }
+    };
+
+    loadFilterOptions();
+  }, [filters.clientId]);
+
   // Load data based on filters
   useEffect(() => {
     const fetchData = async () => {
@@ -153,7 +191,7 @@ const Dashboard = () => {
           query = query.or(`nome.ilike.%${filters.search}%,numero_de_telefone.ilike.%${filters.search}%`);
         }
         
-        // Execute the query with pagination
+        // Execute the query with ordering by data_criacao
         const { data, count, error } = await query
           .order('data_criacao', { ascending: false })
           .range(0, 9); // First 10 rows for the table
@@ -181,10 +219,8 @@ const Dashboard = () => {
         setLeads(transformedData);
         setTotalLeads(count || 0);
 
-        // Once we have the filtered data, we can fetch the metrics, charts, etc.
-        await fetchMetrics();
-        await fetchFiltersData();
-        await fetchChartData();
+        // Once we have the filtered data, we need to fetch all data to generate metrics and charts
+        fetchAllFilteredData();
         
       } catch (error: any) {
         console.error('Error fetching data:', error.message);
@@ -198,18 +234,65 @@ const Dashboard = () => {
       }
     };
 
-    // This is a simplified mock for the metrics
-    const fetchMetrics = async () => {
-      // In a real implementation, these would come from Supabase queries
-      // Here we're just generating mock data
-      
-      // Total leads based on already fetched data
-      const total = totalLeads;
-      
-      // Tracked leads (with campaign data)
-      const tracked = Math.floor(total * 0.8);
-      
-      // Organic leads
+    // Fetch all data matching the current filters to generate metrics and charts
+    const fetchAllFilteredData = async () => {
+      try {
+        // Build the base query - same filters but no pagination
+        let query = supabase
+          .from('TRACKING | CARDS')
+          .select('*');
+        
+        // Apply all the same filters
+        if (filters.clientId) {
+          query = query.eq('user_id', parseInt(filters.clientId));
+        }
+        
+        if (filters.dateRange.from) {
+          const fromDate = format(filters.dateRange.from, 'yyyy-MM-dd');
+          query = query.gte('data_criacao', fromDate);
+        }
+        
+        if (filters.dateRange.to) {
+          const toDate = format(filters.dateRange.to, 'yyyy-MM-dd');
+          query = query.lte('data_criacao', toDate + 'T23:59:59');
+        }
+        
+        if (filters.fonte) {
+          query = query.eq('fonte', filters.fonte);
+        }
+        
+        if (filters.campanha) {
+          query = query.eq('campanha', filters.campanha);
+        }
+        
+        if (filters.conjunto) {
+          query = query.eq('conjunto', filters.conjunto);
+        }
+        
+        if (filters.anuncio) {
+          query = query.eq('anuncio', filters.anuncio);
+        }
+        
+        if (filters.search) {
+          query = query.or(`nome.ilike.%${filters.search}%,numero_de_telefone.ilike.%${filters.search}%`);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        
+        if (data) {
+          generateMetricsAndCharts(data);
+        }
+      } catch (error: any) {
+        console.error('Error fetching all data:', error.message);
+      }
+    };
+
+    const generateMetricsAndCharts = (data: any[]) => {
+      // Generate metrics
+      const total = data.length;
+      const tracked = data.filter(item => item.fonte || item.campanha || item.conjunto || item.anuncio).length;
       const organic = total - tracked;
       
       // Calculate days in period
@@ -222,137 +305,177 @@ const Dashboard = () => {
       // Average per day
       const average = total / daysInPeriod;
       
-      // Percent change (mock)
-      const percentChange = Math.random() > 0.5 ? 15.7 : -8.3;
-      
+      // Set metrics
       setMetrics({
         totalLeads: total,
         trackedLeads: tracked,
         organicLeads: organic,
         averageLeadsPerDay: average,
-        percentChange: percentChange
+        percentChange: 0 // This would require historical data to calculate
       });
+      
+      // Generate leads by day chart data
+      const leadsByDayMap = new Map();
+      data.forEach(item => {
+        if (item.data_criacao) {
+          const date = item.data_criacao.split('T')[0]; // Get just the date part
+          leadsByDayMap.set(date, (leadsByDayMap.get(date) || 0) + 1);
+        }
+      });
+      
+      const leadsByDayArray = Array.from(leadsByDayMap).map(([date, count]) => ({
+        date,
+        count
+      })).sort((a, b) => a.date.localeCompare(b.date));
+      
+      setLeadsByDay(leadsByDayArray);
+      
+      // Generate device chart data
+      const deviceMap = new Map();
+      data.forEach(item => {
+        if (item.dispositivo) {
+          deviceMap.set(item.dispositivo, (deviceMap.get(item.dispositivo) || 0) + 1);
+        } else {
+          deviceMap.set('Unknown', (deviceMap.get('Unknown') || 0) + 1);
+        }
+      });
+      
+      const deviceArray = Array.from(deviceMap).map(([name, value]) => ({
+        name,
+        value
+      })).sort((a, b) => b.value - a.value);
+      
+      setDeviceData(deviceArray);
+      
+      // Generate Sankey chart data (Fonte -> Conjunto -> Anúncio)
+      generateSankeyData(data);
+      
+      // Generate top campaigns, conjuntos, and anuncios
+      generateTopLists(data);
+      
+      // Generate weekday data
+      generateWeekdayData(data);
     };
 
-    // Fetch the filter options
-    const fetchFiltersData = async () => {
-      try {
-        // In a real implementation, these would be separate queries
-        // Here we're creating mock data
-        setFontes(['Google', 'Facebook', 'Instagram', 'Direct']);
-        setCampanhas(['Brand', 'Retargeting', 'Cold Traffic', 'Partner']);
-        setConjuntos(['Desktop', 'Mobile', 'Mixed', 'High Intent']);
-        setAnuncios(['Banner A', 'Video 01', 'Carousel', 'Collection']);
-      } catch (error: any) {
-        console.error('Error fetching filter data:', error.message);
-      }
+    const generateSankeyData = (data: any[]) => {
+      // Create maps for sources, targets, and their relationships
+      const nodesMap = new Map();
+      const linksMap = new Map();
+      
+      // First, add all unique fontes, conjuntos, and anuncios to the nodes map
+      data.forEach(item => {
+        const fonte = item.fonte || 'Unknown';
+        const conjunto = item.conjunto || 'Unknown';
+        const anuncio = item.anuncio || 'Unknown';
+        
+        if (!nodesMap.has(fonte)) nodesMap.set(fonte, nodesMap.size);
+        if (!nodesMap.has(conjunto)) nodesMap.set(conjunto, nodesMap.size);
+        if (!nodesMap.has(anuncio)) nodesMap.set(anuncio, nodesMap.size);
+      });
+      
+      // Then, create links between sources and targets
+      data.forEach(item => {
+        const fonte = item.fonte || 'Unknown';
+        const conjunto = item.conjunto || 'Unknown';
+        const anuncio = item.anuncio || 'Unknown';
+        
+        const sourceIndex1 = nodesMap.get(fonte);
+        const targetIndex1 = nodesMap.get(conjunto);
+        const sourceIndex2 = nodesMap.get(conjunto);
+        const targetIndex2 = nodesMap.get(anuncio);
+        
+        const linkKey1 = `${sourceIndex1}-${targetIndex1}`;
+        const linkKey2 = `${sourceIndex2}-${targetIndex2}`;
+        
+        linksMap.set(linkKey1, (linksMap.get(linkKey1) || 0) + 1);
+        linksMap.set(linkKey2, (linksMap.get(linkKey2) || 0) + 1);
+      });
+      
+      // Convert maps to arrays
+      const nodes = Array.from(nodesMap).map(([name]) => ({ name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      
+      const links = Array.from(linksMap).map(([key, value]) => {
+        const [source, target] = key.split('-').map(Number);
+        return { source, target, value };
+      });
+      
+      setSankeyData({ nodes, links });
     };
 
-    // Fetch the chart data
-    const fetchChartData = async () => {
-      try {
-        // Mock data for charts
-        // In a real implementation, these would be based on Supabase queries
-        
-        // Leads by day
-        const daysData = [];
-        const startDate = filters.dateRange.from || new Date();
-        const endDate = filters.dateRange.to || new Date();
-        
-        let currentDate = new Date(startDate);
-        while (currentDate <= endDate) {
-          daysData.push({
-            date: format(currentDate, 'yyyy-MM-dd'),
-            count: Math.floor(Math.random() * 20) + 5
-          });
-          currentDate.setDate(currentDate.getDate() + 1);
+    const generateTopLists = (data: any[]) => {
+      // Count campaigns
+      const campaignMap = new Map();
+      data.forEach(item => {
+        if (item.campanha) {
+          campaignMap.set(item.campanha, (campaignMap.get(item.campanha) || 0) + 1);
         }
-        
-        setLeadsByDay(daysData);
-        
-        // Device data
-        setDeviceData([
-          { name: 'Mobile', value: Math.floor(Math.random() * 100) + 50 },
-          { name: 'Desktop', value: Math.floor(Math.random() * 70) + 30 },
-          { name: 'Tablet', value: Math.floor(Math.random() * 30) + 10 },
-          { name: 'Unknown', value: Math.floor(Math.random() * 15) + 5 }
-        ]);
-        
-        // Sankey data
-        setSankeyData({
-          nodes: [
-            { name: 'Google' },
-            { name: 'Facebook' },
-            { name: 'Brand' },
-            { name: 'Retargeting' },
-            { name: 'Desktop' },
-            { name: 'Mobile' },
-            { name: 'Banner A' },
-            { name: 'Video 01' }
-          ],
-          links: [
-            { source: 0, target: 2, value: 30 },
-            { source: 0, target: 3, value: 20 },
-            { source: 1, target: 2, value: 15 },
-            { source: 1, target: 3, value: 25 },
-            { source: 2, target: 4, value: 25 },
-            { source: 2, target: 5, value: 20 },
-            { source: 3, target: 4, value: 15 },
-            { source: 3, target: 5, value: 30 },
-            { source: 4, target: 6, value: 25 },
-            { source: 4, target: 7, value: 15 },
-            { source: 5, target: 6, value: 20 },
-            { source: 5, target: 7, value: 30 }
-          ]
-        });
-        
-        // Top performers
-        setTopCampaigns([
-          { name: 'Brand', value: 145 },
-          { name: 'Retargeting', value: 120 },
-          { name: 'Cold Traffic', value: 85 },
-          { name: 'Partner', value: 65 },
-          { name: 'Promotion', value: 40 }
-        ]);
-        
-        setTopConjuntos([
-          { name: 'Desktop', value: 110 },
-          { name: 'Mobile', value: 105 },
-          { name: 'Mixed', value: 90 },
-          { name: 'High Intent', value: 80 },
-          { name: 'Low Cost', value: 70 }
-        ]);
-        
-        setTopAnuncios([
-          { name: 'Banner A', value: 85 },
-          { name: 'Video 01', value: 75 },
-          { name: 'Carousel', value: 65 },
-          { name: 'Collection', value: 55 },
-          { name: 'Product Feed', value: 45 }
-        ]);
-        
-        // Heatmap data
-        const heatmap: { [day: string]: { [hour: string]: number } } = {};
-        
-        // Initialize days
-        for (let day = 0; day < 7; day++) {
-          heatmap[day.toString()] = {};
-          // Initialize hours
-          for (let hour = 0; hour < 24; hour++) {
-            const hourKey = hour.toString().padStart(2, '0');
-            heatmap[day.toString()][hourKey] = Math.floor(Math.random() * 8);
-          }
+      });
+      
+      const campaignArray = Array.from(campaignMap).map(([name, value]) => ({
+        name,
+        value
+      })).sort((a, b) => b.value - a.value).slice(0, 5);
+      
+      setTopCampaigns(campaignArray);
+      
+      // Count conjuntos
+      const conjuntoMap = new Map();
+      data.forEach(item => {
+        if (item.conjunto) {
+          conjuntoMap.set(item.conjunto, (conjuntoMap.get(item.conjunto) || 0) + 1);
         }
-        
-        setHeatmapData(heatmap);
-        
-      } catch (error: any) {
-        console.error('Error fetching chart data:', error.message);
-      }
+      });
+      
+      const conjuntoArray = Array.from(conjuntoMap).map(([name, value]) => ({
+        name,
+        value
+      })).sort((a, b) => b.value - a.value).slice(0, 5);
+      
+      setTopConjuntos(conjuntoArray);
+      
+      // Count anuncios
+      const anuncioMap = new Map();
+      data.forEach(item => {
+        if (item.anuncio) {
+          anuncioMap.set(item.anuncio, (anuncioMap.get(item.anuncio) || 0) + 1);
+        }
+      });
+      
+      const anuncioArray = Array.from(anuncioMap).map(([name, value]) => ({
+        name,
+        value
+      })).sort((a, b) => b.value - a.value).slice(0, 5);
+      
+      setTopAnuncios(anuncioArray);
+    };
+
+    const generateWeekdayData = (data: any[]) => {
+      // Initialize counters for each day of the week (0 = Sunday, 6 = Saturday)
+      const weekdayCounts = {
+        '0': 0, // Sunday
+        '1': 0, // Monday
+        '2': 0, // Tuesday
+        '3': 0, // Wednesday
+        '4': 0, // Thursday
+        '5': 0, // Friday
+        '6': 0  // Saturday
+      };
+      
+      // Count leads by day of week
+      data.forEach(item => {
+        if (item.data_criacao) {
+          const date = new Date(item.data_criacao);
+          const dayOfWeek = date.getDay().toString();
+          weekdayCounts[dayOfWeek] = weekdayCounts[dayOfWeek] + 1;
+        }
+      });
+      
+      setWeekdayData(weekdayCounts);
     };
 
     fetchData();
-  }, [filters, toast, totalLeads]);
+  }, [filters, toast]);
 
   const handleExport = () => {
     // In a real implementation, this would export the data
@@ -437,7 +560,7 @@ const Dashboard = () => {
 
         <LeadsTable leads={leads} totalLeads={totalLeads} />
 
-        <WeeklyHeatmap data={heatmapData} />
+        <WeeklyHeatmap data={weekdayData} />
       </div>
     </div>
   );

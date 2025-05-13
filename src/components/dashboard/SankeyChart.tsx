@@ -30,7 +30,7 @@ export function SankeyChart({ data }: SankeyChartProps) {
   return (
     <Card className="chart-container">
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Fluxo de Campanhas</CardTitle>
+        <CardTitle className="text-lg">Fluxo de Campanhas (Fonte → Conjunto → Anúncio)</CardTitle>
       </CardHeader>
       <CardContent className="pt-0">
         <div className="h-[400px]">
