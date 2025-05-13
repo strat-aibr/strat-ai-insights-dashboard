@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { FilterBar, FilterState } from '@/components/dashboard/FilterBar';
@@ -358,49 +357,70 @@ const Dashboard = () => {
     };
 
     const generateSankeyData = (data: any[]) => {
-      // Create maps for sources, targets, and their relationships
-      const nodesMap = new Map();
-      const linksMap = new Map();
-      
-      // First, add all unique fontes, conjuntos, and anuncios to the nodes map
-      data.forEach(item => {
-        const fonte = item.fonte || 'Unknown';
-        const conjunto = item.conjunto || 'Unknown';
-        const anuncio = item.anuncio || 'Unknown';
+      try {
+        // Create maps for unique nodes and their relationships
+        const uniqueNodes = new Map();
+        const validLinks = new Map();
         
-        if (!nodesMap.has(fonte)) nodesMap.set(fonte, nodesMap.size);
-        if (!nodesMap.has(conjunto)) nodesMap.set(conjunto, nodesMap.size);
-        if (!nodesMap.has(anuncio)) nodesMap.set(anuncio, nodesMap.size);
-      });
-      
-      // Then, create links between sources and targets
-      data.forEach(item => {
-        const fonte = item.fonte || 'Unknown';
-        const conjunto = item.conjunto || 'Unknown';
-        const anuncio = item.anuncio || 'Unknown';
+        // First, collect all unique sources, conjuntos, and anuncios
+        data.forEach(item => {
+          const fonte = item.fonte || 'Unknown Source';
+          const conjunto = item.conjunto || 'Unknown Conjunto';
+          const anuncio = item.anuncio || 'Unknown Anuncio';
+          
+          if (!uniqueNodes.has(fonte)) uniqueNodes.set(fonte, uniqueNodes.size);
+          if (!uniqueNodes.has(conjunto)) uniqueNodes.set(conjunto, uniqueNodes.size);
+          if (!uniqueNodes.has(anuncio)) uniqueNodes.set(anuncio, uniqueNodes.size);
+        });
         
-        const sourceIndex1 = nodesMap.get(fonte);
-        const targetIndex1 = nodesMap.get(conjunto);
-        const sourceIndex2 = nodesMap.get(conjunto);
-        const targetIndex2 = nodesMap.get(anuncio);
+        // Create nodes array
+        const nodes = Array.from(uniqueNodes.keys()).map(name => ({ name }));
         
-        const linkKey1 = `${sourceIndex1}-${targetIndex1}`;
-        const linkKey2 = `${sourceIndex2}-${targetIndex2}`;
+        // Create links with validation to prevent circular references
+        data.forEach(item => {
+          const fonte = item.fonte || 'Unknown Source';
+          const conjunto = item.conjunto || 'Unknown Conjunto';
+          const anuncio = item.anuncio || 'Unknown Anuncio';
+          
+          const sourceIndex1 = uniqueNodes.get(fonte);
+          const targetIndex1 = uniqueNodes.get(conjunto);
+          
+          if (sourceIndex1 !== targetIndex1 && sourceIndex1 !== undefined && targetIndex1 !== undefined) {
+            const linkKey1 = `${sourceIndex1}-${targetIndex1}`;
+            validLinks.set(linkKey1, (validLinks.get(linkKey1) || 0) + 1);
+          }
+          
+          const sourceIndex2 = uniqueNodes.get(conjunto);
+          const targetIndex2 = uniqueNodes.get(anuncio);
+          
+          if (sourceIndex2 !== targetIndex2 && sourceIndex2 !== undefined && targetIndex2 !== undefined) {
+            const linkKey2 = `${sourceIndex2}-${targetIndex2}`;
+            validLinks.set(linkKey2, (validLinks.get(linkKey2) || 0) + 1);
+          }
+        });
         
-        linksMap.set(linkKey1, (linksMap.get(linkKey1) || 0) + 1);
-        linksMap.set(linkKey2, (linksMap.get(linkKey2) || 0) + 1);
-      });
-      
-      // Convert maps to arrays
-      const nodes = Array.from(nodesMap).map(([name]) => ({ name }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-      
-      const links = Array.from(linksMap).map(([key, value]) => {
-        const [source, target] = key.split('-').map(Number);
-        return { source, target, value };
-      });
-      
-      setSankeyData({ nodes, links });
+        // Convert links map to array
+        const links = Array.from(validLinks).map(([key, value]) => {
+          const [source, target] = key.split('-').map(Number);
+          return { source, target, value };
+        });
+        
+        // Ensure we have valid data
+        if (nodes.length === 0 || links.length === 0) {
+          return {
+            nodes: [{ name: 'No Data' }],
+            links: []
+          };
+        }
+        
+        return { nodes, links };
+      } catch (error) {
+        console.error('Error generating Sankey data:', error);
+        return {
+          nodes: [{ name: 'Error' }],
+          links: []
+        };
+      }
     };
 
     const generateTopLists = (data: any[]) => {
