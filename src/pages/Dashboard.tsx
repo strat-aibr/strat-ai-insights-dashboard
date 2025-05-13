@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { FilterBar, FilterState } from '@/components/dashboard/FilterBar';
@@ -8,7 +9,7 @@ import { SankeyChart } from '@/components/dashboard/SankeyChart';
 import { TopRankings } from '@/components/dashboard/TopRankings';
 import { LeadsTable } from '@/components/dashboard/LeadsTable';
 import { WeeklyHeatmap } from '@/components/dashboard/WeeklyHeatmap';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { Card as LeadCard, User } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -85,7 +86,7 @@ const Dashboard = () => {
           if (error) throw error;
           // Transform the data to match the User type structure
           const clientData: User[] = data?.map((item: any) => ({
-            id: item.id.toString(),
+            id: item.id.toString(), // Convert to string to match User type
             name: item.name || 'Unknown',
             email: item.email || '',
             instancia: item.instancia || ''
@@ -119,7 +120,7 @@ const Dashboard = () => {
         
         // Apply filters
         if (filters.clientId) {
-          query = query.eq('user_id', filters.clientId);
+          query = query.eq('user_id', parseInt(filters.clientId)); // Convert string to number
         }
         
         if (filters.dateRange.from) {
@@ -164,7 +165,7 @@ const Dashboard = () => {
           id: item.id,
           nome: item.nome || '',
           numero_de_telefone: item.numero_de_telefone || '',
-          user_id: item.user_id || '',
+          user_id: item.user_id?.toString() || '', // Convert to string if needed
           fonte: item.fonte || '',
           campanha: item.campanha || '',
           conjunto: item.conjunto || '',
