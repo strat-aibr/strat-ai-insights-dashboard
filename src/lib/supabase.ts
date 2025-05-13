@@ -1,14 +1,11 @@
 
-import { createClient } from '@supabase/supabase-js';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
 import { Database } from '@/types/supabase';
 
-// These will be replaced with actual values when connected via the Supabase integration
-// For now, we're using placeholders
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Export the already configured client from the integration
+export const supabase = supabaseClient;
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
-
+// Types for the application
 export type Card = {
   id: number;
   nome: string;
