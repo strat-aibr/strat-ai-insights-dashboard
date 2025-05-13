@@ -291,8 +291,12 @@ const Dashboard = () => {
     const generateMetricsAndCharts = (data: any[]) => {
       // Generate metrics
       const total = data.length;
-      const tracked = data.filter(item => item.fonte || item.campanha || item.conjunto || item.anuncio).length;
-      const organic = total - tracked;
+      
+      // Count leads with source "Orgânico"
+      const organic = data.filter(item => item.fonte === "Orgânico").length;
+      
+      // Count leads with any source except "Orgânico"
+      const tracked = data.filter(item => item.fonte && item.fonte !== "Orgânico").length;
       
       // Calculate days in period
       let daysInPeriod = 30; // Default

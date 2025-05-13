@@ -43,7 +43,7 @@ export function MetricsCards({ metrics }: MetricsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{metrics.totalLeads}</div>
           <p className="text-xs text-muted-foreground">
-            comparado com o período anterior
+            todos os leads independente da fonte
           </p>
         </CardContent>
       </Card>
@@ -55,7 +55,7 @@ export function MetricsCards({ metrics }: MetricsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{metrics.trackedLeads}</div>
           <p className="text-xs text-muted-foreground">
-            leads com dados de campanha
+            leads com fonte, exceto Orgânico
           </p>
         </CardContent>
       </Card>
@@ -67,7 +67,7 @@ export function MetricsCards({ metrics }: MetricsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{metrics.organicLeads}</div>
           <p className="text-xs text-muted-foreground">
-            leads sem dados de campanha
+            apenas leads com fonte Orgânico
           </p>
         </CardContent>
       </Card>
@@ -79,7 +79,7 @@ export function MetricsCards({ metrics }: MetricsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{metrics.averageLeadsPerDay.toFixed(1)}</div>
           <p className="text-xs text-muted-foreground">
-            leads no período selecionado
+            total de leads / dias no período
           </p>
         </CardContent>
       </Card>

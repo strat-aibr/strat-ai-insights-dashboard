@@ -320,6 +320,7 @@ export type Database = {
           id_clienteclickup: string | null
           id_drive_black: string | null
           id_drive_cliente: string | null
+          id_grupo_IA: string | null
           id_grupo_whats: string | null
           id_metricas: number | null
           id_planilha_crm: string | null
@@ -344,6 +345,7 @@ export type Database = {
           id_clienteclickup?: string | null
           id_drive_black?: string | null
           id_drive_cliente?: string | null
+          id_grupo_IA?: string | null
           id_grupo_whats?: string | null
           id_metricas?: number | null
           id_planilha_crm?: string | null
@@ -368,6 +370,7 @@ export type Database = {
           id_clienteclickup?: string | null
           id_drive_black?: string | null
           id_drive_cliente?: string | null
+          id_grupo_IA?: string | null
           id_grupo_whats?: string | null
           id_metricas?: number | null
           id_planilha_crm?: string | null
@@ -573,7 +576,7 @@ export type Database = {
       "IA | RELATORIO": {
         Row: {
           audios: number | null
-          data: string | null
+          Data: string | null
           id: number
           interação: number | null
           mensagens: number | null
@@ -584,7 +587,7 @@ export type Database = {
         }
         Insert: {
           audios?: number | null
-          data?: string | null
+          Data?: string | null
           id?: number
           interação?: number | null
           mensagens?: number | null
@@ -595,7 +598,7 @@ export type Database = {
         }
         Update: {
           audios?: number | null
-          data?: string | null
+          Data?: string | null
           id?: number
           interação?: number | null
           mensagens?: number | null
