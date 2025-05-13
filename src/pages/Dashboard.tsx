@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { FilterBar, FilterState } from '@/components/dashboard/FilterBar';
@@ -9,7 +8,8 @@ import { SankeyChart } from '@/components/dashboard/SankeyChart';
 import { TopRankings } from '@/components/dashboard/TopRankings';
 import { LeadsTable } from '@/components/dashboard/LeadsTable';
 import { WeeklyHeatmap } from '@/components/dashboard/WeeklyHeatmap';
-import { supabase, Card as LeadCard, User } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import { Card as LeadCard, User } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
@@ -78,12 +78,20 @@ const Dashboard = () => {
       if (isAdmin) {
         try {
           const { data, error } = await supabase
-            .from('user')
+            .from('TRACKING | USERS')
             .select('*')
             .order('name');
           
           if (error) throw error;
-          setClients(data || []);
+          // Transform the data to match the User type structure
+          const clientData: User[] = data?.map((item: any) => ({
+            id: item.id.toString(),
+            name: item.name || 'Unknown',
+            email: item.email || '',
+            instancia: item.instancia || ''
+          })) || [];
+          
+          setClients(clientData);
         } catch (error: any) {
           console.error('Error loading clients:', error.message);
           toast({
@@ -106,7 +114,7 @@ const Dashboard = () => {
       try {
         // Build the base query
         let query = supabase
-          .from('cards')
+          .from('TRACKING | CARDS')
           .select('*', { count: 'exact' });
         
         // Apply filters
@@ -151,7 +159,25 @@ const Dashboard = () => {
         
         if (error) throw error;
         
-        setLeads(data || []);
+        // Transform data to match the LeadCard type
+        const transformedData = data?.map((item: any) => ({
+          id: item.id,
+          nome: item.nome || '',
+          numero_de_telefone: item.numero_de_telefone || '',
+          user_id: item.user_id || '',
+          fonte: item.fonte || '',
+          campanha: item.campanha || '',
+          conjunto: item.conjunto || '',
+          anuncio: item.anuncio || '',
+          palavra_chave: item.palavra_chave || '',
+          browser: item.browser || '',
+          location: item.location || '',
+          dispositivo: item.dispositivo || '',
+          data_criacao: item.data_criacao || '',
+          created_at: item.created_at || ''
+        })) || [];
+        
+        setLeads(transformedData);
         setTotalLeads(count || 0);
 
         // Once we have the filtered data, we can fetch the metrics, charts, etc.
