@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   ResponsiveContainer, 
   Sankey, 
-  Tooltip 
+  Tooltip,
+  Layer,
+  Text
 } from 'recharts';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +42,38 @@ const getNodeColor = (nodeName: string): string => {
     return '#ff8042'; // Orange for ads
   }
   return '#83a6ed'; // Default blue
+};
+
+// Custom label rendering function
+const renderCustomNodeLabel = ({ x, y, width, height, index, payload, name }: any) => {
+  // Extract the node name without the prefix (Fonte:, Campanha:, etc.)
+  let displayName = name;
+  if (name.includes(':')) {
+    displayName = name.split(': ')[1] || displayName;
+  }
+  
+  // Truncate long names
+  const truncatedName = displayName.length > 15 
+    ? displayName.substring(0, 12) + '...' 
+    : displayName;
+
+  return (
+    <Layer key={`CustomNode${index}`}>
+      <Text
+        x={x + width / 2}
+        y={y + height / 2}
+        textAnchor="middle"
+        verticalAnchor="middle"
+        fill="#fff"
+        fontSize={10}
+        fontWeight="bold"
+        stroke="#000"
+        strokeWidth={0.5}
+      >
+        {truncatedName}
+      </Text>
+    </Layer>
+  );
 };
 
 export function SankeyChart({ data }: SankeyChartProps) {
@@ -111,16 +145,24 @@ export function SankeyChart({ data }: SankeyChartProps) {
         <p className="text-sm text-muted-foreground">Visualização do tráfego de leads: Fonte → Campanha → Conjunto → Anúncio</p>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="h-[500px]"> {/* Increased height for better visibility */}
+        <div className="h-[550px]"> {/* Increased height for better visibility with labels */}
           <ResponsiveContainer width="100%" height="100%">
             <Sankey
               data={safeData}
-              nodePadding={40}
-              nodeWidth={20}
+              nodePadding={50} // Increased padding to give more space for labels
+              nodeWidth={25} // Slightly increased node width
               linkCurvature={0.5}
-              iterations={64}
-              margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-              link={{ stroke: '#d0d0d0' }}
+              iterations={32}
+              margin={{ top: 30, right: 30, bottom: 30, left: 30 }} // Increased margins
+              link={{ 
+                stroke: '#d0d0d0',
+                opacity: 0.8, // Slight transparency for better visualization
+              }}
+              node={{
+                fill: '#8884d8',
+                stroke: '#fff',
+                strokeWidth: 1,
+              }}
             >
               <Tooltip 
                 formatter={(value) => [`${value} leads`, 'Volume']}
@@ -133,10 +175,17 @@ export function SankeyChart({ data }: SankeyChartProps) {
                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
                 }}
               />
+              {safeData.nodes.map((entry, index) => (
+                renderCustomNodeLabel({
+                  ...entry,
+                  index,
+                  payload: entry
+                })
+              ))}
             </Sankey>
           </ResponsiveContainer>
         </div>
-        <div className="mt-4 text-xs text-muted-foreground flex flex-wrap justify-center gap-4">
+        <div className="mt-6 text-xs text-muted-foreground flex flex-wrap justify-center gap-4">
           <div className="flex items-center">
             <span className="inline-block w-3 h-3 mr-1 rounded-sm" style={{ backgroundColor: '#8884d8' }}></span>
             <span>Fontes</span>
