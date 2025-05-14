@@ -547,6 +547,53 @@ export type Database = {
           },
         ]
       }
+      "IA | INTERNO": {
+        Row: {
+          apikey: string | null
+          grupo_aviso: string | null
+          host: string | null
+          id: number
+          id_drive_doc: string | null
+          id_workflow_agent: string | null
+          id_workflow_entrada: string | null
+          id_workflow_tools: string | null
+          instancia: string | null
+          user_id: number | null
+        }
+        Insert: {
+          apikey?: string | null
+          grupo_aviso?: string | null
+          host?: string | null
+          id?: number
+          id_drive_doc?: string | null
+          id_workflow_agent?: string | null
+          id_workflow_entrada?: string | null
+          id_workflow_tools?: string | null
+          instancia?: string | null
+          user_id?: number | null
+        }
+        Update: {
+          apikey?: string | null
+          grupo_aviso?: string | null
+          host?: string | null
+          id?: number
+          id_drive_doc?: string | null
+          id_workflow_agent?: string | null
+          id_workflow_entrada?: string | null
+          id_workflow_tools?: string | null
+          instancia?: string | null
+          user_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "IA | Interno_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "CADASTRO | CLIENTES"
+            referencedColumns: ["COD"]
+          },
+        ]
+      }
       "IA | NUMEROS": {
         Row: {
           id: number
