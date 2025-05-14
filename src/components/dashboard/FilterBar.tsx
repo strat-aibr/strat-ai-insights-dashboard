@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { format } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { User } from '@/lib/supabase';
 import { CalendarIcon, Download, Search, Filter, X } from 'lucide-react';
 
@@ -33,6 +33,11 @@ type FilterBarProps = {
   anuncios: string[];
   onExport: () => void;
   isClientView: boolean;
+};
+
+type DatePreset = {
+  label: string;
+  getValue: () => { from: Date; to: Date };
 };
 
 export function FilterBar({
@@ -67,6 +72,86 @@ export function FilterBar({
     }
     
     return `${format(filters.dateRange.from, 'PP')} - ${format(filters.dateRange.to, 'PP')}`;
+  };
+
+  const datePresets: DatePreset[] = [
+    {
+      label: 'Hoje',
+      getValue: () => {
+        const now = new Date();
+        return {
+          from: now,
+          to: now
+        };
+      }
+    },
+    {
+      label: 'Ontem',
+      getValue: () => {
+        const yesterday = subDays(new Date(), 1);
+        return {
+          from: yesterday,
+          to: yesterday
+        };
+      }
+    },
+    {
+      label: 'Últimos 7 dias',
+      getValue: () => {
+        return {
+          from: subDays(new Date(), 6),
+          to: new Date()
+        };
+      }
+    },
+    {
+      label: 'Últimos 14 dias',
+      getValue: () => {
+        return {
+          from: subDays(new Date(), 13),
+          to: new Date()
+        };
+      }
+    },
+    {
+      label: 'Últimos 30 dias',
+      getValue: () => {
+        return {
+          from: subDays(new Date(), 29),
+          to: new Date()
+        };
+      }
+    },
+    {
+      label: 'Este mês',
+      getValue: () => {
+        const now = new Date();
+        return {
+          from: startOfMonth(now),
+          to: now
+        };
+      }
+    },
+    {
+      label: 'Mês passado',
+      getValue: () => {
+        const now = new Date();
+        const lastMonth = subMonths(now, 1);
+        return {
+          from: startOfMonth(lastMonth),
+          to: endOfMonth(lastMonth)
+        };
+      }
+    }
+  ];
+
+  const selectDatePreset = (preset: DatePreset) => {
+    const { from, to } = preset.getValue();
+    setFilters({
+      ...filters,
+      dateRange: { from, to }
+    });
+    setCalendarOpen(false);
   };
 
   return (
@@ -105,7 +190,19 @@ export function FilterBar({
                   {formatDateRange()}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+              <PopoverContent className="w-auto p-0 pointer-events-auto flex" align="start">
+                <div className="border-r p-2 flex flex-col space-y-1 min-w-[160px]">
+                  {datePresets.map((preset) => (
+                    <Button
+                      key={preset.label}
+                      variant="ghost"
+                      className="justify-start text-left font-normal"
+                      onClick={() => selectDatePreset(preset)}
+                    >
+                      {preset.label}
+                    </Button>
+                  ))}
+                </div>
                 <Calendar
                   initialFocus
                   mode="range"
